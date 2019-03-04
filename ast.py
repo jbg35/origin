@@ -1,46 +1,98 @@
-class AST(object):
-	pass
+class Expr(object):
+    pass
 
-class Bool(AST):
-	def __init__(self, b):
-		assert b == True or b == False
-		self.b = b
+class Bool(Expr):
+    def __init__(self, val):
+        self.value = val
 
-	def __repr__(self):
-		return "Bool ({})".format(self.b)
+    def __repr__(self):
+        return "Bool ({})".format(self.value)
 
-	def evaluate(self, ctx):
-		return self.b
+class andOp(Expr):
+    
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
 
-class andOp(AST):
-	
-	def __init__(self, left, right):
-		self.left = left
-		self.right = right
+    def __repr__(self):
+        return "andOp({} , {})".format(self.left, self.right)
 
-	def __repr__(self):
-		return "andOp({} , {})".format(self.left, self.right)
+    def step_and(self):
+        if isValue(self.left) and isValue(self.right):
+            return Bool(self.left.value and self.right.value)
 
-	def evaluate(self, ctx):
-		lhs = self.left.evaluate(ctx)
-		rhs = self.right.evaluate(ctx)
-		return lhs and rhs
-	
-class orOp(AST):
-	def __init__(self, left, right):
-		self.left = left
-		self.right = right
+        if isReducible(self.left):
+            return andOp(step(self.left), self.right)
 
-	def __repr__(self):
-		return "orOp({},{})".format(self.left, self.right)
+        if isReducible(self.right):
+            return andOp(self.left, step(self.right))
 
-	def evaluate(self,ctx):
-		return self.left.evaluate(ctx) or self.right.evaluate(ctx)
+class orOp(Expr):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
 
-class notOp(AST):
-	def __init__(self, val):
-		self.val = val
-	def __repr__(self):
-		return "notOp({})".format(self.value)
-	def evaluate(self,ctx):
-		return not self.val.evaluate(ctx)
+    def __repr__(self):
+        return "orOp({},{})".format(self.left, self.right)
+
+    def orEval(self):
+        if isValue(self.left) and isValue(self.right):
+            return Bool(self.left.value and self.right.value)
+
+        if isReducible(self.left):
+            return orOp(step(self.left), self.right)
+
+        if isReducible(self.right):
+            return orOp(self.left, step(self.right))
+
+class notOp(Expr):
+    def __init__(self, e):
+        self.expr = e
+
+    def __repr__(self):
+        return "notOp({})".format(self.expr)
+
+    def notEval(self):
+        if isValue(self.expr):
+            return Bool(not self.expr)
+
+        return notOp(step(self.expr))
+
+def same(e1, e2):
+    if type(e1) is not type(e2):
+        return False
+
+    if type(e1) is Bool:
+        return e1.value == e2.value
+
+    if type(e1) is notOp:
+        return same(e1.value, e2.value)
+
+    if type(e1) is andOp:
+        return same(e1.left, e2.left) and same(e1.right, e2.right)
+
+    if type(e1) is orOp:
+        return same(e1.left, e2.left) and same(e1.right, e2.right)
+
+def isValue(e):
+    return type(e) is Bool
+
+def isReducible(e):
+    return not isValue(e)
+
+def step(e):
+    assert isReducible(e)
+
+    if type(e) is notOp:
+        return notOp.notEval(e)
+
+    if type(e) is andOp:
+        return andOp.step_and(e)
+
+    if type(e) is orOp:
+        return orOp.step_and(e)
+
+def reduce(e):
+    while isReducible(e):
+        e = step(e)
+    return e

@@ -1,17 +1,21 @@
 from ast import *
 
+# e = not (true and not false)
 
-env = {}
+e0 = \
+  notOp(
+    andOp(
+      Bool(True),
+      notOp(Bool(False))))
 
-andexpr = andOp(Bool(1), Bool(1))
-result = andexpr.evaluate(env)
-assert result == 1
+print(e0)
+e = step(e0)
+print(e) # one step reduction of e
+e = step(e)
+print(e) # two step reduction of e
+e = step(e)
+print(e) # three step reduction
 
-orexpr = orOp(Bool(1), Bool(0))
-result = orexpr.evaluate(env)
-assert result == 1
 
-notexpr = notOp(Bool(1))
-result = notexpr.evaluate(env)
-assert result == 0
-
+r = reduce(e0)
+print(r)
