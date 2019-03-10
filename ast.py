@@ -18,35 +18,40 @@
 # e1 >= e2
 # e1 <= e2
 
-class type:
+class Type:
     pass
 
-class boolType(type):
+class BoolType(Type):
     def __str__(self):
-        return "Boolean"
+        return "T: Boolean"
 
-class intType(type):
+class IntType(Type):
     def __str__(self):
-        return "Integer"
+        return "T: Integer"
 
  ########
 
-class Expr(object):
+class Expr:
     def __init__(self):
         self.type = None
 
 class Bool(Expr):
     def __init__(self, val):
+        Expr.__init__(self)
         self.value = val
 
     def __repr__(self):
         return "Bool ({})".format(self.value)
 
+    def boolEval(self):
+        return e.value
+
 class andOp(Expr):
 
     def __init__(self, left, right):
-        self.left = left
-        self.right = right
+        Expr.__init__(self)
+        self.left = expr(left)
+        self.right = expr(right)
 
     def __repr__(self):
         return "andOp({} , {})".format(self.left, self.right)
@@ -67,8 +72,9 @@ class andOp(Expr):
 
 class orOp(Expr):
     def __init__(self, left, right):
-        self.left = left
-        self.right = right
+        Expr.__init__(self)
+        self.left = expr(left)
+        self.right = expr(right)
 
     def __repr__(self):
         return "orOp({},{})".format(self.left, self.right)
@@ -88,20 +94,21 @@ class orOp(Expr):
 
 class notOp(Expr):
     def __init__(self, e):
-        self.expr = e
-
+        Expr.__init__(self)
+        self.expr = expr(e)
     def __repr__(self):
         return "notOp({})".format(self.expr)
 
-    def notEval(self):
-        if isValue(self.expr):
-            return Bool(not self.expr)
+    def step_not(self):
+        return step_unary(e, notOp, lambda x: not x)
 
-        return notOp(step(self.expr))
+    def notEval(self):
+        return not evaluate(e.expr)
 
 
 class ifOp(Expr):
     def __init__(self, e1, e2, e3):
+        Expr.__init__(self)
         self.cond = e1
         self.true = e2
         self.false = e3
@@ -123,59 +130,69 @@ class ifOp(Expr):
         else:
             return evaluate(e.false)
 
-class int(Expr):
+class Int(Expr):
     def __init__(self, val):
+        Expr.__init__(self)
         self.value = val
 
     def __str__(self):
         return str(self.value)
 
+    def intEval(self):
+        return e.value
+
 class addOp(Expr):
-    def __init__ (self, e1, e2):
-        self.lhs = e1
-        self.rhs = e2
+    def __init__ (self, lhs, rhs):
+        Expr.__init__(self)
+        self.lhs = expr(lhs)
+        self.rhs= expr(rhs)
 
     def __str__(self):
         return "addOp({} + {})".format(self.lhs, self.rhs)
 
     def step_add(self):
-        pass
+        return step_binary(e, addOp, lambda x, y: x+y)
+            # lambda (arguments) : expression
+            # Will x + y given an x and y
 
     def addEval(self):
-        return lhs + rhs
+        return evaluate(lhs) + evaluate(rhs)
 
 class subOp(Expr):
-    def __init__ (self, e1, e2):
-        self.lhs = e1
-        self.rhs = e2
+    def __init__ (self, lhs, rhs):
+        Expr.__init__(self)
+        self.lhs = expr(lhs)
+        self.rhs= expr(rhs)
 
     def __str__(self):
         return "subOp({} - {})".format(self.lhs, self.rhs)
 
     def step_sub(self):
-        pass
+        return step_binary(e, subOp, lambda x, y: x-y)
 
     def subEval(self):
-        return lhs - rhs
+        return evaluate(lhs) - evaluate(rhs)
 
 class mulOp(Expr):
-    def __init__ (self, e1, e2):
-        self.lhs = e1
-        self.rhs = e2
+    def __init__ (self, lhs, rhs):
+        Expr.__init__(self)
+        self.lhs = expr(lhs)
+        self.rhs= expr(rhs)
 
     def __str__(self):
         return "mulOp({} * {})".format(self.lhs, self.rhs)
 
     def step_mul(self):
-        pass
+        return step_binary(e, mulOp, lambda x,y: x*y)
 
     def mulEval(self):
-        return lhs * rhs
+        return evaluate(lhs) * evaluate(rhs)
 
 class divOp(Expr):
-    def __init__ (self, e1, e2):
-        self.lhs = e1
-        self.rhs = e2
+    def __init__ (self, lhs, rhs):
+        Expr.__init__(self)
+        self.lhs = expr(lhs)
+        self.rhs= expr(rhs)
 
     def __str__(self):
         return "divOp({} / {})".format(self.lhs, self.rhs)
@@ -184,12 +201,13 @@ class divOp(Expr):
         pass
 
     def divEval(self):
-        return lhs / rhs
+        return evaluate(lhs) / evaluate(rhs)
 
 class modOp(Expr):
-    def __init__ (self, e1, e2):
-        self.lhs = e1
-        self.rhs = e2
+    def __init__ (self, lhs, rhs):
+        Expr.__init__(self)
+        self.lhs = expr(lhs)
+        self.rhs= expr(rhs)
 
     def __str__(self):
         return "modOp({} % {})".format(self.lhs, self.rhs)
@@ -198,12 +216,13 @@ class modOp(Expr):
         pass
 
     def modEval(self):
-        return lhs % rhs
+        return evaluate(lhs) % evaluate(rhs)
 
 class eqOp(Expr):
-    def __init__ (self, e1, e2):
-        self.lhs = e1
-        self.rhs = e2
+    def __init__ (self, lhs, rhs):
+        Expr.__init__(self)
+        self.lhs = expr(lhs)
+        self.rhs= expr(rhs)
 
     def __str__(self):
         return "eqOp({} == {})".format(self.lhs, self.rhs)
@@ -212,12 +231,13 @@ class eqOp(Expr):
         pass
 
     def eqEval(self):
-        return lhs == rhs
+        return evaluate(lhs) == evaluate(rhs)
 
 class gtOp(Expr):
-    def __init__ (self, e1, e2):
-        self.lhs = e1
-        self.rhs = e2
+    def __init__ (self, lhs, rhs):
+        Expr.__init__(self)
+        self.lhs = expr(lhs)
+        self.rhs= expr(rhs)
 
     def __str__(self):
         return "subOp({} > {})".format(self.lhs, self.rhs)
@@ -226,10 +246,11 @@ class gtOp(Expr):
         pass
 
     def gtEval(self):
-        return lhs > rhs
+        return evaluate(lhs) > evaluate(rhs)
 
 class ltOp(Expr):
     def __init__ (self, e1, e2):
+        Expr.__init__(self)
         self.lhs = e1
         self.rhs = e2
 
@@ -240,10 +261,11 @@ class ltOp(Expr):
         pass
 
     def ltEval(self):
-        return lhs < rhs
+        return evaluate(lhs) < evaluate(rhs)
 
 class gteOp(Expr):
     def __init__ (self, e1, e2):
+        Expr.__init__(self)
         self.lhs = e1
         self.rhs = e2
 
@@ -254,10 +276,11 @@ class gteOp(Expr):
         pass
 
     def gteEval(self):
-        return lhs >= rhs
+        return evaluate(lhs) >= evaluate(rhs)
 
 class lteOp(Expr):
     def __init__ (self, e1, e2):
+        Expr.__init__(self)
         self.lhs = e1
         self.rhs = e2
 
@@ -268,12 +291,12 @@ class lteOp(Expr):
         pass
 
     def lteEval(self):
-        return lhs <= rhs
+        return evaluate(lhs) <= evaluate(rhs)
 
 def expr(e):
-    if type(x) is bool:
-        return Bool()
-    if type(x) is int:
-        return Int()
+    if type(e) is bool:
+        return Bool(e)
+    if type(e) is int:
+        return Int(e)
+    return e
 
-    return x

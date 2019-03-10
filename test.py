@@ -1,21 +1,20 @@
-from ast import *
+from helpers import *
 
-# e = not (true and not false)
+e = eqOp(subOp(15, 3), addOp(3,5))
+print(e)
+print(check(e))
+e = andOp(True, False)
+  
+print(e)
+print(check(e))
 
-e0 = \
-  notOp(
-    andOp(
-      Bool(True),
-      notOp(Bool(False))))
-
-print(e0)
-e = step(e0)
-print(e) # one step reduction of e
-e = step(e)
-print(e) # two step reduction of e
-e = step(e)
-print(e) # three step reduction
-
-
-r = reduce(e0)
-print(r)
+try:
+  e2 = \
+    eqOp(
+      addOp(3, 5),
+      subOp(11, True) # nope
+    )
+  print(e2)
+  check(e2)
+except Exception as err:
+  print(f"error: {err}")
