@@ -1,21 +1,22 @@
+
 from ast import *
+import copy
 
-# e = not (true and not false)
+clone = copy.deepcopy
 
-e0 = \
-  notOp(
-    andOp(
-      Bool(True),
-      notOp(Bool(False))))
-
-print(e0)
-e = step(e0)
-print(e) # one step reduction of e
-e = step(e)
-print(e) # two step reduction of e
-e = step(e)
-print(e) # three step reduction
+impl = \
+  LambdaExpr([VarDecl("p", boolType), VarDecl("q", boolType)], OrExpr(NotExpr("p"), "q"))
 
 
-r = reduce(e0)
-print(r)
+
+table = [
+  resolve(CallExpr(clone(impl), [True, True])),
+  resolve(CallExpr(clone(impl), [True, False])),
+  resolve(CallExpr(clone(impl), [False, True])),
+  resolve(CallExpr(clone(impl), [False, False]))
+]
+
+for e in table:
+  print(e)
+  print(evaluate(e))
+  reduce(e)
