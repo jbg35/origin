@@ -1,20 +1,22 @@
-from helpers import *
 
-e = eqOp(subOp(15, 3), addOp(3,5))
-print(e)
-print(check(e))
-e = andOp(True, False)
-  
-print(e)
-print(check(e))
+from ast import *
+import copy
 
-try:
-  e2 = \
-    eqOp(
-      addOp(3, 5),
-      subOp(11, True) # nope
-    )
-  print(e2)
-  check(e2)
-except Exception as err:
-  print(f"error: {err}")
+clone = copy.deepcopy
+
+impl = \
+  LambdaExpr([VarDecl("p", boolType), VarDecl("q", boolType)], OrExpr(NotExpr("p"), "q"))
+
+
+
+table = [
+  resolve(CallExpr(clone(impl), [True, True])),
+  resolve(CallExpr(clone(impl), [True, False])),
+  resolve(CallExpr(clone(impl), [False, True])),
+  resolve(CallExpr(clone(impl), [False, False]))
+]
+
+for e in table:
+  print(e)
+  print(evaluate(e))
+  reduce(e)

@@ -18,285 +18,269 @@
 # e1 >= e2
 # e1 <= e2
 
+import copy
+
+clone = copy.deepcopy
+
+class Closure:
+  def __init__(self, abs, env):
+    self.abs = abs
+    self.env = clone(env)
+
 class Type:
-    pass
+  pass
 
 class BoolType(Type):
-    def __str__(self):
-        return "T: Boolean"
+  def __str__(self):
+    return "Bool"
 
 class IntType(Type):
-    def __str__(self):
-        return "T: Integer"
+  def __str__(self):
+    return "Int"
 
- ########
+class ArrowType(Type):
+  def __init__(self, t1, t2):
+    self.parm = t1
+    self.ret = t2
+  
+  def __str__(self):
+    return f"({self.lhs} -> {self.rhs}"
+
+class FuncType(Type):
+  def __init__(self, parms, ret):
+    self.parms = parms
+    self.ret = ret
+
+boolType = BoolType()
+intType = IntType()
 
 class Expr:
-    def __init__(self):
-        self.type = None
+  pass
 
-class Bool(Expr):
-    def __init__(self, val):
-        Expr.__init__(self)
-        self.value = val
+class BoolExpr(Expr):
+  def __init__(self, val):
+    self.val = val
 
-    def __repr__(self):
-        return "Bool ({})".format(self.value)
+  def __str__(self):
+    return "Bool ({})".format(self.val)
 
-    def boolEval(self):
-        return e.value
+  def eval_bool(self, store):
+    return self.val
 
-class andOp(Expr):
+class AndExpr(Expr):
+  def __init__(self, e1, e2):
+    self.lhs = expr(e1)
+    self.rhs = expr(e2)
 
-    def __init__(self, left, right):
-        Expr.__init__(self)
-        self.left = expr(left)
-        self.right = expr(right)
+  def __str__(self):
+    return "andOp({} , {})".format(self.lhs, self.rhs)
 
-    def __repr__(self):
-        return "andOp({} , {})".format(self.left, self.right)
+  def step_and(self):
+    if is_reducible(self.lhs):
+      return step(self.lhs), self.rhs
 
-    def step_and(self):
-        if isValue(self.left) and isValue(self.right):
-            return Bool(self.left.value and self.right.value)
+    if is_reducible(self.rhs):
+      return self.lhs, step(self.rhs)
 
-        if isReducible(self.left):
-            return andOp(step(self.left), self.right)
+    return BoolExpr(self.lhs.val and self.rhs.val)
 
-        if isReducible(self.right):
-            return andOp(self.left, step(self.right))
+  def eval_and(self, store):
+    return evaluate(self.lhs, store) and evaluate(self.rhs, store)
 
-    def andEval(self):
-        return evaluate(lhs) and evaluate(rhs)
+class OrExpr(Expr):
+  def __init__(self, e1, e2):
+    self.lhs = expr(e1)
+    self.rhs = expr(e2)
 
+  def __str__(self):
+    return "orOp({},{})".format(self.lhs, self.rhs)
 
-class orOp(Expr):
-    def __init__(self, left, right):
-        Expr.__init__(self)
-        self.left = expr(left)
-        self.right = expr(right)
+  def step_or(self):
+    if is_reducible(self.lhs):
+      return OrExpr(step(self.lhs), self.rhs)
 
-    def __repr__(self):
-        return "orOp({},{})".format(self.left, self.right)
+    if is_reducible(self.rhs):
+      return OrExpr(self.lhs, step(self.rhs))
 
-    def step_or(self):
-        if isValue(self.left) and isValue(self.right):
-            return Bool(self.left.value and self.right.value)
+    return BoolExpr(self.lhs.val or self.rhs.val)
 
-        if isReducible(self.left):
-            return orOp(step(self.left), self.right)
+  def eval_or(self,store):
+    return evaluate(self.lhs, store) or evaluate(self.rhs, store)
 
-        if isReducible(self.right):
-            return orOp(self.left, step(self.right))
+class NotExpr(Expr):
+  def __init__(self, e1):
+    self.expr = expr(e1)
 
-    def orEval(self):
-        return evaluate(lhs) or evaluate(rhs)
+  def __str__(self):
+    return "notOp({})".format(self.expr)
 
-class notOp(Expr):
-    def __init__(self, e):
-        Expr.__init__(self)
-        self.expr = expr(e)
-    def __repr__(self):
-        return "notOp({})".format(self.expr)
+  def step_not(self):
+    if is_reducible(self.expr):
+      return NotExpr(step(self.expr))
 
-    def step_not(self):
-        return step_unary(e, notOp, lambda x: not x)
+    return BoolExpr(not self.expr.val)
 
-    def notEval(self):
-        return not evaluate(e.expr)
+  def eval_not(self,store):
+    return not evaluate(self.expr, store)
 
+class IfExpr(Expr):
+  def __init__(self, e1, e2, e3):
+    self.cond = expr(e1)
+    self.true = expr(e2)
+    self.false = expr(e3)
 
-class ifOp(Expr):
-    def __init__(self, e1, e2, e3):
-        Expr.__init__(self)
-        self.cond = e1
-        self.true = e2
-        self.false = e3
+  def step_if(self):
+    if is_reducible(self.cond):
+      return NotExpr(step(self.cond), self.true, self.false)
 
-    def __str__(self):
-        return "ifOp(if {} then {} else {})".format(self.e1,self.e2,self.e3)
+    if self.cond.val:
+      return self.true
+    else:
+      return self.false
 
-    def step_if(self):
-        if isReducible(cond):
-            return notOp(step(e.cond), true, false)
-        if cond.val:
-            return true
-        else:
-            return false
+  def __str__(self):
+    return "ifOp(if {} then {} else {})".format(self.cond,self.true,self.false)
 
-    def ifEval(self):
-        if evaluate(e.cond):
-            return evaluate(e.true)
-        else:
-            return evaluate(e.false)
+class IdExpr(Expr):
+  def __init__(self, x):
+    if type(x) is str:
+      self.id = x
+      self.ref = None 
+    elif type(x) is VarDecl:
+      self.id = x.id
+      self.ref = x
 
-class Int(Expr):
-    def __init__(self, val):
-        Expr.__init__(self)
-        self.value = val
+  def __str__(self):
+    return self.id
 
-    def __str__(self):
-        return str(self.value)
+  def eval_id(self,store):
+    return store[self.ref]
 
-    def intEval(self):
-        return e.value
+class VarDecl:
+  def __init__(self, id, t):
+    self.id = id
+    self.type = t
 
-class addOp(Expr):
-    def __init__ (self, lhs, rhs):
-        Expr.__init__(self)
-        self.lhs = expr(lhs)
-        self.rhs= expr(rhs)
+  def __str__(self):
+    return self.id
 
-    def __str__(self):
-        return "addOp({} + {})".format(self.lhs, self.rhs)
+class AbsExpr(Expr):
+  def __init__(self, var, e1):
+    self.var = decl(var)
+    self.expr = expr(e1)
 
-    def step_add(self):
-        return step_binary(e, addOp, lambda x, y: x+y)
-            # lambda (arguments) : expression
-            # Will x + y given an x and y
+  def __str__(self):
+    return f"\\{self.var}.{self.expr}"
 
-    def addEval(self):
-        return evaluate(lhs) + evaluate(rhs)
+  def eval_abs(self,store):
 
-class subOp(Expr):
-    def __init__ (self, lhs, rhs):
-        Expr.__init__(self)
-        self.lhs = expr(lhs)
-        self.rhs= expr(rhs)
+    return Closure(e, store)
 
-    def __str__(self):
-        return "subOp({} - {})".format(self.lhs, self.rhs)
+class AppExpr(Expr):
+  def __init__(self, e1, e2):
+    self.lhs = expr(e1)
+    self.rhs = expr(e2)
 
-    def step_sub(self):
-        return step_binary(e, subOp, lambda x, y: x-y)
+  def __str__(self):
+    return f"({self.lhs} {self.rhs})"
 
-    def subEval(self):
-        return evaluate(lhs) - evaluate(rhs)
+  def step_app(self):
+    if is_reducible(self.lhs): # App-1
+      return AppExpr(step(self.lhs), self.rhs)
 
-class mulOp(Expr):
-    def __init__ (self, lhs, rhs):
-        Expr.__init__(self)
-        self.lhs = expr(lhs)
-        self.rhs= expr(rhs)
+    if type(self.lhs) is not AbsExpr:
+      raise Exception("application of non-lambda")
 
-    def __str__(self):
-        return "mulOp({} * {})".format(self.lhs, self.rhs)
+    if is_reducible(self.rhs): # App-2
+      return AppExpr(self.lhs, step(self.rhs))
 
-    def step_mul(self):
-        return step_binary(e, mulOp, lambda x,y: x*y)
+    s = {
+      self.lhs.var: self.rhs
+    }
 
-    def mulEval(self):
-        return evaluate(lhs) * evaluate(rhs)
+    return subst(e.lhs.expr, s);
+  def eval_app(self,store):
+    c = evaluate(self.lhs, store)
 
-class divOp(Expr):
-    def __init__ (self, lhs, rhs):
-        Expr.__init__(self)
-        self.lhs = expr(lhs)
-        self.rhs= expr(rhs)
+    if type(c) is not Closure:
+      raise Exception("cannot apply a non-closure to an argument")
 
-    def __str__(self):
-        return "divOp({} / {})".format(self.lhs, self.rhs)
+    v = evaluate(self.rhs, store)
 
-    def step_div(self):
-        pass
+    return evaluate(c.abs.expr, c.env + {c.abs.var: v})
 
-    def divEval(self):
-        return evaluate(lhs) / evaluate(rhs)
+class LambdaExpr(Expr):
+  def __init__(self, vars, e1):
+    self.vars = list(map(decl, vars))
+    self.expr = expr(e1)
 
-class modOp(Expr):
-    def __init__ (self, lhs, rhs):
-        Expr.__init__(self)
-        self.lhs = expr(lhs)
-        self.rhs= expr(rhs)
+  def __str__(self):
+    parms = ",".join(str(v) for v in self.vars)
+    return f"\\({parms}).{self.expr}"
 
-    def __str__(self):
-        return "modOp({} % {})".format(self.lhs, self.rhs)
+  def eval_lambda(self, store):
+    return Closure(self, store)
 
-    def step_mod(self):
-        pass
+class CallExpr(Expr):
+  def __init__(self, fn, args):
+    self.fn = expr(fn)
+    self.args = list(map(expr, args))
 
-    def modEval(self):
-        return evaluate(lhs) % evaluate(rhs)
+  def __str__(self):
+    args = ",".join(str(a) for a in self.args)
+    return f"{self.fn} ({args})"
 
-class eqOp(Expr):
-    def __init__ (self, lhs, rhs):
-        Expr.__init__(self)
-        self.lhs = expr(lhs)
-        self.rhs= expr(rhs)
+  def step_call(self):
+    if is_reducible(self.fn):
+      return CallExpr(step(self.fn), self.args)
 
-    def __str__(self):
-        return "eqOp({} == {})".format(self.lhs, self.rhs)
+    if len(self.args) < len(self.fn.vars):
+      raise Exception("too few arguments")
+    if len(self.args) > len(self.fn.vars):
+      raise Exception("too many arguments")
 
-    def step_eq(self):
-        pass
+    for i in range(len(self.args)):
+      if is_reducible(self.args[i]):
+        return CallExpr(self.fn, self.args[:i] + [step(self.args[i])] + self.args[i+1:])
 
-    def eqEval(self):
-        return evaluate(lhs) == evaluate(rhs)
+    s = {}
+    for i in range(len(self.args)):
+      s[self.fn.vars[i]] = self.args[i]
 
-class gtOp(Expr):
-    def __init__ (self, lhs, rhs):
-        Expr.__init__(self)
-        self.lhs = expr(lhs)
-        self.rhs= expr(rhs)
+    return subst(self.fn.expr, s);
 
-    def __str__(self):
-        return "subOp({} > {})".format(self.lhs, self.rhs)
+  def eval_call(self,store):
+    c = evaluate(self.fn, store)
+  
+    if type(c) is not Closure:
+      raise Exception("cannot apply a non-closure to an argument")
 
-    def step_gt(self):
-        pass
+    args = []
+    for a in self.args:
+      args += [evaluate(a, store)]
 
-    def gtEval(self):
-        return evaluate(lhs) > evaluate(rhs)
+    env = clone(c.env)
+    for i in range(len(args)):
+      env[c.abs.vars[i]] = args[i]
 
-class ltOp(Expr):
-    def __init__ (self, e1, e2):
-        Expr.__init__(self)
-        self.lhs = e1
-        self.rhs = e2
+    return evaluate(c.abs.expr, env)
 
-    def __str__(self):
-        return "subOp({} < {})".format(self.lhs, self.rhs)
+class PlaceholderExpr(Expr):
+  def __str__(self):
+    return "_"
 
-    def step_lt(self):
-        pass
+def expr(x):
+  if type(x) is bool:
+    return BoolExpr(x)
+  if type(x) is str:
+    return IdExpr(x)
+  return x
 
-    def ltEval(self):
-        return evaluate(lhs) < evaluate(rhs)
+def decl(x):
+  if type(x) is str:
+    return VarDecl(x)
+  return x
 
-class gteOp(Expr):
-    def __init__ (self, e1, e2):
-        Expr.__init__(self)
-        self.lhs = e1
-        self.rhs = e2
-
-    def __str__(self):
-        return "subOp({} >= {})".format(self.lhs, self.rhs)
-
-    def step_gte(self):
-        pass
-
-    def gteEval(self):
-        return evaluate(lhs) >= evaluate(rhs)
-
-class lteOp(Expr):
-    def __init__ (self, e1, e2):
-        Expr.__init__(self)
-        self.lhs = e1
-        self.rhs = e2
-
-    def __str__(self):
-        return "subOp({} <= {})".format(self.lhs, self.rhs)
-
-    def step_lte(self):
-        pass
-
-    def lteEval(self):
-        return evaluate(lhs) <= evaluate(rhs)
-
-def expr(e):
-    if type(e) is bool:
-        return Bool(e)
-    if type(e) is int:
-        return Int(e)
-    return e
-
+from lookup import resolve
+from subst import subst
+from reduce import *
