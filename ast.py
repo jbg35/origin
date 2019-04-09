@@ -17,7 +17,7 @@
 # e1 < e2
 # e1 >= e2
 # e1 <= e2
-
+from typing import List
 import copy
 
 clone = copy.deepcopy
@@ -29,6 +29,27 @@ class Closure:
 
 class Type:
   pass
+
+class TupleType(Type):
+    def __init__(self, *vals: Type):
+        self.vals = list(vals)
+
+    def __str__(self) -> str:
+        return f"TupleType({', ' .join(map(str,self.vals))})"
+
+    def __getitem__(self, index):
+        return self.vals[index]
+
+    def __len__(self):
+        return len(self.vals)
+
+class StructType(Type):
+    def __init__(self, name:str, contents:List[str]):
+        self.name = name
+        self.contents = contents # Should have a type
+
+    def __repr__(self) -> str:
+        return f'Struct {self.name}(Contents: {self.contents})'
 
 class BoolType(Type):
   def __str__(self):
@@ -42,7 +63,7 @@ class ArrowType(Type):
   def __init__(self, t1, t2):
     self.parm = t1
     self.ret = t2
-  
+
   def __str__(self):
     return f"({self.lhs} -> {self.rhs}"
 
@@ -145,7 +166,7 @@ class IdExpr(Expr):
   def __init__(self, x):
     if type(x) is str:
       self.id = x
-      self.ref = None 
+      self.ref = None
     elif type(x) is VarDecl:
       self.id = x.id
       self.ref = x
@@ -251,7 +272,7 @@ class CallExpr(Expr):
 
   def eval_call(self,store):
     c = evaluate(self.fn, store)
-  
+
     if type(c) is not Closure:
       raise Exception("cannot apply a non-closure to an argument")
 
@@ -284,3 +305,4 @@ def decl(x):
 from lookup import resolve
 from subst import subst
 from reduce import *
+from tuples import *
