@@ -6,6 +6,16 @@ def lookup(id, stk):
       return scope[id]
   return None
 
+def typeRes(ts, stk):
+  for s in ts:
+    resolve(s, stk)
+
+def type_resolve(t : Type, stk : list = []):
+  if type(t) is BoolType:
+    return t
+  if type(t) is IntType:
+    return t
+
 def resolve(e, stk = []):
   # Resolve references to declared variables. This requires a scope
   # stack. A scope is a mappings from names to their declarations.
@@ -77,4 +87,22 @@ def resolve(e, stk = []):
       resolve(e.fn, stk)
     return e
 
+  if type(e) is BoolType:
+    return e
+
+  if type(e) is IntType:
+    return e
+
+  if type(e) is FuncType:
+    typeRes(e.parms, stk)
+    type_resolve(e.rets, stk)
+
+  if type(e) is TupleType:
+    type_resolve(e.vals, stk)
+    return e
+
+  if type(e) is StructType:
+    resolve(e.name)
+    resolve(e.contents)
+    return e
   assert False

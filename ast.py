@@ -27,11 +27,19 @@ class Closure:
     self.abs = abs
     self.env = clone(env)
 
+class Typer:
+  def __init__(self, T):
+    self.T = T
+
+  def __str__(self):
+    return f"{self.T}"
+
 class Type:
   pass
 
 class TupleType(Type):
     def __init__(self, *vals: Type):
+        Type.__init__(self)
         self.vals = list(vals)
 
     def __str__(self) -> str:
@@ -45,6 +53,7 @@ class TupleType(Type):
 
 class StructType(Type):
     def __init__(self, name:str, contents:List[str]):
+        Type.__init__(self)
         self.name = name
         self.contents = contents # Should have a type
 
@@ -52,6 +61,8 @@ class StructType(Type):
         return f'Struct {self.name}(Contents: {self.contents})'
 
 class BoolType(Type):
+  def __init__(self):
+    Type.__init__(self)
   def __str__(self):
     return "Bool"
 
@@ -68,12 +79,10 @@ class ArrowType(Type):
     return f"({self.lhs} -> {self.rhs}"
 
 class FuncType(Type):
-  def __init__(self, parms, ret):
-    self.parms = parms
-    self.ret = ret
-
-boolType = BoolType()
-intType = IntType()
+  def __init__(self, parms, rets):
+    Type.__init__(self)
+    self.parms = list(map(type_expr, parms))
+    self.rets = type_expr(rets)
 
 class Expr:
   pass
@@ -300,6 +309,15 @@ def expr(x):
 def decl(x):
   if type(x) is str:
     return VarDecl(x)
+  return x
+
+def type_expr(x):
+  if x is bool:
+    return BoolType()
+  if x is int:
+    return IntType()
+  if type(x) is str:
+    return IdType(x)
   return x
 
 from lookup import resolve

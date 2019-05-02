@@ -5,14 +5,24 @@ import copy
 clone = copy.deepcopy
 
 
+testbool = resolve(BoolType())
+print(testbool)
+testint = resolve(IntType())
+print(testint)
+testtuple = resolve(TupleType([BoolType,IntType]))
+print(testtuple)
+
+#testfunc = resolve(FuncType(bool))
+#print(testfunc)
+
 # test = TupleType(VarDecl("p", boolType) ,'test')
 # print(test)
 # print_tup(test, 1)
 # len_tup(test)
 # print(TupleType)
-k = ['Dog', 1]
-test = StructType('Animal', k)
-print(test)
+# k = ['Dog', 1]
+# test = StructType('Animal', k)
+# print(test)
 
 # impl = \
 #   LambdaExpr([VarDecl("p", boolType), VarDecl("q", boolType)], OrExpr(NotExpr("p"), "q"))
